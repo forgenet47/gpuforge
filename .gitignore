@@ -1,0 +1,57 @@
+# Private planning and development material
+.internal/
+.private/
+docs/development/
+docs/internal/
+**/*.plan.md
+**/*.private.md
+**/*roadmap*.md
+**/TODO*.md
+**/NOTES*.md
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.seed
+*.mnemonic
+secrets/
+wallets/
+**/coldkey*
+**/hotkey*
+
+# Runtime data and potentially sensitive artifacts
+logs/
+data/private/
+datasets/private/
+artifacts/
+checkpoints/
+runs/
+wandb/
+*.log
+*.sqlite
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+dist/
+build/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
