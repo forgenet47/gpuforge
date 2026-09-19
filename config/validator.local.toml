@@ -1,0 +1,26 @@
+role = "validator"
+network = "local"
+netuid = 1
+
+[timeouts]
+request_seconds = 30
+job_seconds = 3600
+shutdown_seconds = 30
+
+[storage]
+root = ".gpuforge/validator"
+max_artifact_bytes = 21474836480
+max_checkpoint_bytes = 8589934592
+
+[evidence]
+minimum_tier = "c"
+fail_closed = true
+max_age_seconds = 300
+
+[sandbox]
+cpu_cores = 4
+memory_mb = 8192
+gpu_count = 0
+pids_limit = 256
+writable_bytes = 8589934592
+network_policy = "deny"
