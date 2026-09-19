@@ -47,6 +47,7 @@ __pycache__/
 htmlcov/
 .venv/
 venv/
+.gpuforge/
 dist/
 build/
 

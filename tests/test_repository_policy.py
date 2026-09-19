@@ -11,6 +11,22 @@ import pytest
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 GIT_EXECUTABLE = shutil.which("git")
 
+
+def _is_git_worktree() -> bool:
+    if GIT_EXECUTABLE is None:
+        return False
+    result = subprocess.run(  # noqa: S603 - executable and arguments are test constants.
+        [GIT_EXECUTABLE, "rev-parse", "--is-inside-work-tree"],
+        cwd=REPOSITORY_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    return result.returncode == 0 and result.stdout.strip() == "true"
+
+
+GIT_WORKTREE_AVAILABLE = _is_git_worktree()
+
 PRIVATE_PATHS = (
     ".internal/example.md",
     ".private/example.md",
@@ -33,7 +49,7 @@ PRIVATE_PATHS = (
 @pytest.mark.parametrize("private_path", PRIVATE_PATHS)
 def test_private_path_is_ignored(private_path: str) -> None:
     """Private development and runtime artifacts must stay outside Git."""
-    if GIT_EXECUTABLE is None:
+    if not GIT_WORKTREE_AVAILABLE or GIT_EXECUTABLE is None:
         pytest.skip("Git is required to verify repository ignore rules")
 
     result = subprocess.run(  # noqa: S603 - executable and arguments are test constants.
@@ -48,7 +64,7 @@ def test_private_path_is_ignored(private_path: str) -> None:
 @pytest.mark.parametrize("public_path", ("README.md", "pyproject.toml", "src/gpuforge/cli.py"))
 def test_public_source_is_not_ignored(public_path: str) -> None:
     """Technical source and documentation must remain publishable."""
-    if GIT_EXECUTABLE is None:
+    if not GIT_WORKTREE_AVAILABLE or GIT_EXECUTABLE is None:
         pytest.skip("Git is required to verify repository ignore rules")
 
     result = subprocess.run(  # noqa: S603 - executable and arguments are test constants.

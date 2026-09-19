@@ -42,6 +42,19 @@ Public documentation is limited to technical behavior, interfaces, security assu
 
 There is no supported miner or validator release yet. Installation and network-operation instructions will be added only after the protocol, sandbox, adversarial tests, and testnet acceptance criteria are complete.
 
+## Offline configuration validation
+
+The checked-in local configurations contain no credentials and do not identify a live network. They can be validated without importing Bittensor or opening a network connection:
+
+```text
+python -m gpuforge miner --config config/miner.local.toml --check-config
+python -m gpuforge validator --config config/validator.local.toml --check-config
+```
+
+Configuration files must never contain passwords, tokens, private keys, seed phrases, or other credentials. The only supported secret inputs are `GPUFORGE_ARTIFACT_ACCESS_TOKEN` and `GPUFORGE_ATTESTATION_ACCESS_TOKEN`, supplied to the process at runtime. Configuration summaries report only whether these values are present, and the logging formatter redacts their contents.
+
+The local evidence tier is for development tests only. Non-local configurations reject that tier and require fail-closed verification. The sandbox settings are policy declarations at this stage; workload isolation is not implemented and no publisher-supplied code should be run.
+
 ## Development checks
 
 GPUForge supports Python 3.10 through 3.14. Create an isolated environment and install the development tools:
