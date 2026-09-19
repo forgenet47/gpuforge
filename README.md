@@ -55,6 +55,19 @@ Configuration files must never contain passwords, tokens, private keys, seed phr
 
 The local evidence tier is for development tests only. Non-local configurations reject that tier and require fail-closed verification. The sandbox settings are policy declarations at this stage; workload isolation is not implemented and no publisher-supplied code should be run.
 
+## Protocol encoding
+
+Protocol version 1 defines typed `JobManifest`, `CapabilityClaim`, `WorkLease`, `ExecutionEvidence`, and `ValidationReceipt` messages. Messages use a deliberately restricted canonical JSON profile:
+
+- UTF-8 with NFC-normalized bounded text;
+- lexicographically sorted object keys and no insignificant whitespace;
+- integers only, with no floating-point or non-finite numbers;
+- strict required fields with unknown and duplicate fields rejected;
+- deterministic ordering for set-like fields; and
+- a 64 KiB maximum encoded message size.
+
+Wire decoders accept canonical bytes only. Each message digest is SHA-256 over a versioned GPUForge domain separator and the exact canonical bytes. This provides deterministic identities and prevents alternate JSON representations from producing ambiguous signed data. Cryptographic signing and replay protection are not implemented yet.
+
 ## Development checks
 
 GPUForge supports Python 3.10 through 3.14. Create an isolated environment and install the development tools:
