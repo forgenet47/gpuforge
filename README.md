@@ -66,7 +66,17 @@ Protocol version 1 defines typed `JobManifest`, `CapabilityClaim`, `WorkLease`, 
 - deterministic ordering for set-like fields; and
 - a 64 KiB maximum encoded message size.
 
-Wire decoders accept canonical bytes only. Each message digest is SHA-256 over a versioned GPUForge domain separator and the exact canonical bytes. This provides deterministic identities and prevents alternate JSON representations from producing ambiguous signed data. Cryptographic signing and replay protection are not implemented yet.
+Wire decoders accept canonical bytes only. Each message digest is SHA-256 over a versioned GPUForge domain separator and the exact canonical bytes. This provides deterministic identities and prevents alternate JSON representations from producing ambiguous signed data.
+
+## Message authentication
+
+Protocol signatures cover a separate versioned signing domain, the message type, protocol version, and canonical payload with the signature field omitted. Signatures are fixed-width 64-byte values encoded as lowercase hexadecimal. The signing adapter uses the public SS58 hotkey as the role identity and is intentionally compatible with Bittensor keypair-shaped objects without requiring Bittensor during offline tests.
+
+Freshness validation uses bounded block windows. Capability claims, execution evidence, and validation receipts reject stale or implausibly future block observations; manifests and leases reject expired transitions. Capability and lease nonces are 256-bit random values. Other message types use their unsigned content digest as a replay token.
+
+The replay cache is bounded and fails closed instead of evicting active entries. Optional on-disk state is replaced atomically, stores hashed cache keys rather than raw hotkeys or nonces, and preserves nonce and evidence-sequence decisions across process restarts. Operators must place replay state on durable private storage. This authenticates protocol messages; it does not yet provide workload isolation, GPU attestation, or proof that a miner executed a training job correctly.
+
+Wallet seed phrases, private keys, and passwords must never be passed in protocol messages, configuration files, command arguments, logs, or replay state. Only public hotkey addresses and signatures belong in these messages.
 
 ## Development checks
 

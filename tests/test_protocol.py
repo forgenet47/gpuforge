@@ -51,12 +51,12 @@ GOLDEN_VECTORS = {
         "sha256:c2d08d2cc208dfe760194a3c804867e685b91fd9b13e3d3b5d5a11cefe34bfce",
     ),
     "execution_evidence": (
-        999,
-        "sha256:efa4c25cbe4c7d1c49c7b7b6187297ecc58da883808eeabf2e6453fd7e6dd75b",
+        1024,
+        "sha256:c83806b4779b037b14e0d8d7a7e3f3a5f79935fa728a86682d0ba839c3b87460",
     ),
     "validation_receipt": (
         472,
-        "sha256:21b583957e4c5eb5972dfba275488bd72f4d979d99986d1b6f393a039dce8cdb",
+        "sha256:011f358e75e4f2b6ec9ccdfd60ef4d443ffe5c6be86c9092253d81c227fb4714",
     ),
 }
 
@@ -161,6 +161,7 @@ def execution_evidence(*, reverse: bool = False) -> ExecutionEvidence:
         result_digest=digest("9"),
         work_units=4_096,
         active_seconds_ms=120_000,
+        submitted_at_block=960,
         sequence=1,
         signature=SIGNATURE,
     )
@@ -457,6 +458,7 @@ def test_capability_and_checkpoint_duplicates_are_rejected() -> None:
             result_digest=digest("4"),
             work_units=1,
             active_seconds_ms=1,
+            submitted_at_block=1,
             sequence=0,
             signature=SIGNATURE,
         )
@@ -493,13 +495,13 @@ def test_receipt_result_fields_are_consistent(receipt: Callable[[], ValidationRe
         receipt()
 
 
-def test_signature_hex_must_have_even_length() -> None:
-    """Signature placeholders use an unambiguous byte-oriented hex encoding."""
+def test_signature_hex_must_encode_exactly_64_bytes() -> None:
+    """Protocol signatures use the fixed 64-byte hotkey signature width."""
     primitive = job_manifest().to_primitive()
     values = cast(dict[str, object], primitive["payload"])
     values["signature"] = "abc"
 
-    with pytest.raises(ProtocolValidationError, match="even"):
+    with pytest.raises(ProtocolValidationError, match="byte-length"):
         JobManifest.from_payload(values, PROTOCOL_VERSION)
 
 
