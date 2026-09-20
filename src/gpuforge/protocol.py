@@ -17,6 +17,9 @@ MAX_WIRE_BYTES = 64 * 1024
 MAX_BLOCK_NUMBER = 2**63 - 1
 MAX_WORK_UNITS = 2**63 - 1
 _DIGEST_DOMAIN = b"gpuforge-protocol-digest-v1\x00"
+_CONTENT_DOMAIN = b"gpuforge-protocol-content-v1\x00"
+_SIGNATURE_DOMAIN = b"gpuforge-protocol-signature-v1\x00"
+UNSIGNED_SIGNATURE = "00" * 64
 
 _DIGEST_PATTERN = re.compile(r"sha256:[0-9a-f]{64}")
 _HEX_PATTERN = re.compile(r"[0-9a-f]+")
@@ -224,6 +227,23 @@ class ProtocolMessage:
         if len(encoded) > MAX_WIRE_BYTES:
             raise ProtocolValidationError("Encoded message exceeds the wire size limit")
         return encoded
+
+    def _unsigned_primitive(self) -> dict[str, object]:
+        value = self.to_primitive()
+        payload = cast(dict[str, object], value["payload"])
+        payload.pop("signature", None)
+        return value
+
+    def signing_bytes(self) -> bytes:
+        """Return domain-separated bytes signed by a role hotkey."""
+        return _SIGNATURE_DOMAIN + _canonical_json(self._unsigned_primitive())
+
+    def content_digest(self) -> str:
+        """Return a signature-independent identity for semantic content."""
+        value = hashlib.sha256(
+            _CONTENT_DOMAIN + _canonical_json(self._unsigned_primitive())
+        ).hexdigest()
+        return f"sha256:{value}"
 
     def digest(self) -> str:
         """Return a domain-separated SHA-256 digest of canonical bytes."""
@@ -524,6 +544,7 @@ class ExecutionEvidence(ProtocolMessage):
     result_digest: str
     work_units: int
     active_seconds_ms: int
+    submitted_at_block: int
     sequence: int
     signature: str
     protocol_version: int = PROTOCOL_VERSION
@@ -549,6 +570,7 @@ class ExecutionEvidence(ProtocolMessage):
         _digest("result_digest", self.result_digest)
         _bounded_int("work_units", self.work_units, 1, MAX_WORK_UNITS)
         _bounded_int("active_seconds_ms", self.active_seconds_ms, 1, 86_400_000)
+        _bounded_int("submitted_at_block", self.submitted_at_block, 1, MAX_BLOCK_NUMBER)
         _bounded_int("sequence", self.sequence, 0, MAX_WORK_UNITS)
         _signature(self.signature)
 
@@ -564,6 +586,7 @@ class ExecutionEvidence(ProtocolMessage):
             "result_digest": self.result_digest,
             "sequence": self.sequence,
             "signature": self.signature,
+            "submitted_at_block": self.submitted_at_block,
             "work_units": self.work_units,
         }
 
@@ -583,6 +606,7 @@ class ExecutionEvidence(ProtocolMessage):
                 "result_digest",
                 "sequence",
                 "signature",
+                "submitted_at_block",
                 "work_units",
             },
             "execution_evidence",
@@ -605,6 +629,7 @@ class ExecutionEvidence(ProtocolMessage):
             result_digest=_text(payload["result_digest"], "result_digest"),
             work_units=_integer(payload["work_units"], "work_units"),
             active_seconds_ms=_integer(payload["active_seconds_ms"], "active_seconds_ms"),
+            submitted_at_block=_integer(payload["submitted_at_block"], "submitted_at_block"),
             sequence=_integer(payload["sequence"], "sequence"),
             signature=_text(payload["signature"], "signature"),
             protocol_version=version,
@@ -898,9 +923,7 @@ def _nonce(value: object) -> None:
 
 
 def _signature(value: object) -> None:
-    _bounded_text("signature", value, 2, 512, _HEX_PATTERN, ascii_only=True)
-    if len(cast(str, value)) % 2 != 0:
-        raise ProtocolValidationError("Signature hex length must be even")
+    _bounded_text("signature", value, 128, 128, _HEX_PATTERN, ascii_only=True)
 
 
 def _version(value: object) -> None:
