@@ -78,6 +78,30 @@ The replay cache is bounded and fails closed instead of evicting active entries.
 
 Wallet seed phrases, private keys, and passwords must never be passed in protocol messages, configuration files, command arguments, logs, or replay state. Only public hotkey addresses and signatures belong in these messages.
 
+## Publisher packaging
+
+The publisher library builds a `JobManifest` from files beneath one package root. It hashes the training entrypoint, hashes every explicitly declared regular input, sorts normalized relative input paths, derives a domain-separated input-root digest, validates the typed resource and verification policies, requires a future expiry block, and signs the result with the publisher hotkey. Absolute paths, path traversal, symbolic links, duplicate inputs, unavailable files, and unpinned container references are rejected.
+
+Container images must use an immutable OCI reference of the form `registry.example/repository@sha256:<64 lowercase hex>`. A mutable tag such as `:latest` is not sufficient. The default CLI policy requests one GPU with 81,920 MiB of GPU memory and denies outbound network access; these are declared constraints, not proof of the physical GPU model or enforcement by a sandbox.
+
+After installing the optional Bittensor integration, a publisher can create a signed manifest offline:
+
+```text
+python -m gpuforge publisher package \
+  --root ./sample-job \
+  --entrypoint train.py \
+  --input data/sample.bin \
+  --container registry.example/repository@sha256:<64-lowercase-hex> \
+  --job-id sample-training-1 \
+  --current-block <current-block> \
+  --expires-at-block <future-block> \
+  --wallet-name <local-wallet-name> \
+  --hotkey-name <local-hotkey-name> \
+  --output ./signed-manifest.json
+```
+
+The command reads an existing local Bittensor wallet by name and does not accept seed phrases, private keys, passwords, or access tokens as arguments. It performs no network operation. The output is the exact canonical signed manifest; package distribution and miner execution remain unavailable.
+
 ## Development checks
 
 GPUForge supports Python 3.10 through 3.14. Create an isolated environment and install the development tools:

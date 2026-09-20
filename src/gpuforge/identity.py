@@ -57,11 +57,20 @@ class BittensorHotkeyAdapter:
     @property
     def hotkey(self) -> str:
         """Return the public SS58 hotkey address."""
-        return self.keypair.ss58_address
+        try:
+            value = self.keypair.ss58_address
+        except Exception:
+            raise AuthenticationError("Hotkey address is unavailable") from None
+        if not isinstance(value, str):
+            raise AuthenticationError("Hotkey address is invalid")
+        return value
 
     def sign(self, payload: bytes) -> bytes:
         """Sign exact domain-separated bytes with the wrapped hotkey."""
-        signature = self.keypair.sign(payload)
+        try:
+            signature = self.keypair.sign(payload)
+        except Exception:
+            raise AuthenticationError("Hotkey signing failed") from None
         if not isinstance(signature, bytes) or len(signature) != SIGNATURE_BYTES:
             raise AuthenticationError("Hotkey signer returned an invalid signature")
         return signature
@@ -70,7 +79,10 @@ class BittensorHotkeyAdapter:
         """Verify exact bytes only when the requested hotkey matches this keypair."""
         if hotkey != self.hotkey or len(signature) != SIGNATURE_BYTES:
             return False
-        return bool(self.keypair.verify(payload, signature))
+        try:
+            return bool(self.keypair.verify(payload, signature))
+        except Exception:
+            return False
 
 
 def generate_nonce() -> str:
