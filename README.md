@@ -1,5 +1,9 @@
 # GPUForge Subnet
 
+<p align="center">
+  <img src="docs/figure.jpg" alt="GPUForge logo" width="360">
+</p>
+
 > **Development status:** This codebase is under active development and is not ready for miners, validators, production workloads, testnet deployment, or mainnet deployment. Interfaces, scoring rules, and security assumptions may change without notice. Do not run untrusted training jobs or use production wallet credentials with this repository.
 
 GPUForge is a proposed Bittensor subnet for verifiable GPU training work. A job publisher supplies a signed, immutable training workload. Miners execute that workload on eligible NVIDIA H100 hardware. Validators measure correct, useful training throughput and translate verified results into miner scores.
