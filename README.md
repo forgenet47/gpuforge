@@ -112,6 +112,12 @@ The artifact interface represents container images, scripts, dataset shards, and
 
 Artifact references contain no storage URL or credential. Adapters can request short-lived, operation-scoped access grants through an injected hook. Grant values are redacted from representations and errors; expired, missing, or incorrectly scoped grants fail closed. The included adapter is for offline development and tests only. It does not provide a network artifact service, hardened multi-tenant storage, or authorization suitable for miners and validators.
 
+## Capability discovery
+
+Miner capability discovery accepts an injectable provider that returns only GPU name, memory, driver version, runtime version, and interconnect. The public protocol deliberately excludes serial numbers, hostnames, user names, device paths, network addresses, and unrelated host telemetry. Known H100 SXM, PCIe, and NVL spellings are normalized to stable values; GPU count is derived from the returned devices; and heterogeneous, incomplete, unsupported, or policy-incompatible inventories are rejected.
+
+Driver/runtime acceptance is controlled by an explicit compatibility policy supplied by the operator rather than an implicit local default. The resulting hotkey-signed `CapabilityClaim` always labels discovery as `self_reported`. This proves who signed the claim and makes its contents deterministic; it does not prove that the GPU exists, that the provider is honest, or that training ran on that GPU. Hardware-backed verification and challenge evidence are separate later gates. No miner or validator should treat software discovery as H100 attestation.
+
 ## Development checks
 
 GPUForge supports Python 3.10 through 3.14. Create an isolated environment and install the development tools:

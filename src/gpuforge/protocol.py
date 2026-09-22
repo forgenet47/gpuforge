@@ -8,6 +8,7 @@ import re
 import unicodedata
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from enum import Enum
 from typing import ClassVar, TypeVar, cast
 
 from gpuforge.config import EvidenceTier, NetworkPolicy
@@ -39,6 +40,12 @@ class ProtocolValidationError(ProtocolError):
 
 class ProtocolDecodeError(ProtocolError):
     """Raised when wire bytes are malformed, ambiguous, or non-canonical."""
+
+
+class CapabilityTrust(str, Enum):
+    """Trust attached to software-discovered hardware capability fields."""
+
+    SELF_REPORTED = "self_reported"
 
 
 @dataclass(frozen=True, slots=True)
@@ -347,6 +354,8 @@ class CapabilityClaim(ProtocolMessage):
     gpu_count: int
     gpu_model: str
     gpu_memory_mb: int
+    gpu_interconnect: str
+    discovery_trust: CapabilityTrust
     runtime_versions: tuple[SoftwareVersion, ...]
     supported_evidence_tiers: tuple[EvidenceTier, ...]
     available_gpu_seconds: int
@@ -361,6 +370,9 @@ class CapabilityClaim(ProtocolMessage):
         _bounded_int("gpu_count", self.gpu_count, 1, 8)
         _bounded_text("gpu_model", self.gpu_model, 1, 64, ascii_only=True)
         _bounded_int("gpu_memory_mb", self.gpu_memory_mb, 1_024, 1_048_576)
+        _bounded_text("gpu_interconnect", self.gpu_interconnect, 1, 32, _CODE_PATTERN)
+        if self.discovery_trust is not CapabilityTrust.SELF_REPORTED:
+            raise ProtocolValidationError("Capability discovery trust must be self-reported")
         if (
             not isinstance(self.runtime_versions, tuple)
             or not 1 <= len(self.runtime_versions) <= 32
@@ -398,8 +410,10 @@ class CapabilityClaim(ProtocolMessage):
         return {
             "available_gpu_seconds": self.available_gpu_seconds,
             "gpu_count": self.gpu_count,
+            "gpu_interconnect": self.gpu_interconnect,
             "gpu_memory_mb": self.gpu_memory_mb,
             "gpu_model": self.gpu_model,
+            "discovery_trust": self.discovery_trust.value,
             "miner_hotkey": self.miner_hotkey,
             "nonce": self.nonce,
             "observed_at_block": self.observed_at_block,
@@ -416,8 +430,10 @@ class CapabilityClaim(ProtocolMessage):
             {
                 "available_gpu_seconds",
                 "gpu_count",
+                "gpu_interconnect",
                 "gpu_memory_mb",
                 "gpu_model",
+                "discovery_trust",
                 "miner_hotkey",
                 "nonce",
                 "observed_at_block",
@@ -439,6 +455,10 @@ class CapabilityClaim(ProtocolMessage):
             gpu_count=_integer(payload["gpu_count"], "gpu_count"),
             gpu_model=_text(payload["gpu_model"], "gpu_model"),
             gpu_memory_mb=_integer(payload["gpu_memory_mb"], "gpu_memory_mb"),
+            gpu_interconnect=_text(payload["gpu_interconnect"], "gpu_interconnect"),
+            discovery_trust=_enum_value(
+                CapabilityTrust, payload["discovery_trust"], "discovery_trust"
+            ),
             runtime_versions=tuple(SoftwareVersion.from_primitive(item) for item in runtime_values),
             supported_evidence_tiers=tuple(
                 _enum_value(EvidenceTier, item, "supported_evidence_tiers") for item in tier_values
@@ -931,7 +951,7 @@ def _version(value: object) -> None:
         raise ProtocolValidationError("Unsupported protocol version")
 
 
-EnumValue = TypeVar("EnumValue", EvidenceTier, NetworkPolicy)
+EnumValue = TypeVar("EnumValue", CapabilityTrust, EvidenceTier, NetworkPolicy)
 
 
 def _enum_value(enum_type: type[EnumValue], value: object, name: str) -> EnumValue:
