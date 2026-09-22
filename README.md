@@ -106,6 +106,12 @@ python -m gpuforge publisher package \
 
 The command reads an existing local Bittensor wallet by name and does not accept seed phrases, private keys, passwords, or access tokens as arguments. It performs no network operation. The output is the exact canonical signed manifest; package distribution and miner execution remain unavailable.
 
+## Artifact integrity
+
+The artifact interface represents container images, scripts, dataset shards, and checkpoints using a kind, exact byte length, and lowercase SHA-256 digest. The local adapter streams data into content-addressed storage and publishes it only after the complete length and digest match. Fetches use a separate partial file, resume at its verified byte offset, enforce a bounded retry count, and atomically expose the destination only after hashing the completed transfer.
+
+Artifact references contain no storage URL or credential. Adapters can request short-lived, operation-scoped access grants through an injected hook. Grant values are redacted from representations and errors; expired, missing, or incorrectly scoped grants fail closed. The included adapter is for offline development and tests only. It does not provide a network artifact service, hardened multi-tenant storage, or authorization suitable for miners and validators.
+
 ## Development checks
 
 GPUForge supports Python 3.10 through 3.14. Create an isolated environment and install the development tools:
