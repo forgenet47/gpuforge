@@ -8,7 +8,7 @@ import json
 import os
 import re
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import cast
 
 from gpuforge.identity import (
@@ -183,6 +183,7 @@ def _safe_root(path: Path) -> Path:
 def _safe_regular_file(root: Path, relative: Path, label: str) -> tuple[Path, str]:
     if (
         relative.is_absolute()
+        or bool(PureWindowsPath(relative.as_posix()).anchor)
         or not relative.parts
         or any(part in {"", ".", ".."} for part in relative.parts)
     ):

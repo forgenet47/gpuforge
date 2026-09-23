@@ -133,7 +133,12 @@ def test_input_order_does_not_change_root(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "unsafe_path",
-    (Path("../outside.bin"), Path("data/../train.py"), Path("C:/absolute.bin")),
+    (
+        Path("../outside.bin"),
+        Path("data/../train.py"),
+        Path("C:/absolute.bin"),
+        Path("C:drive-relative.bin"),
+    ),
 )
 def test_path_traversal_and_absolute_inputs_are_rejected(tmp_path: Path, unsafe_path: Path) -> None:
     """Declared inputs cannot escape or ambiguously traverse the package root."""
