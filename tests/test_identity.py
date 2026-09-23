@@ -22,6 +22,7 @@ from gpuforge.identity import (
 )
 from gpuforge.protocol import (
     CapabilityClaim,
+    CapabilityTrust,
     CheckpointCommitment,
     ExecutionEvidence,
     JobManifest,
@@ -108,6 +109,8 @@ def claim(*, nonce: str = NONCE, observed_at_block: int = 1_000) -> CapabilityCl
         gpu_count=1,
         gpu_model="NVIDIA H100 SXM",
         gpu_memory_mb=81_920,
+        gpu_interconnect="nvlink",
+        discovery_trust=CapabilityTrust.SELF_REPORTED,
         runtime_versions=(SoftwareVersion("cuda", "12.8"),),
         supported_evidence_tiers=(EvidenceTier.C,),
         available_gpu_seconds=3_600,
