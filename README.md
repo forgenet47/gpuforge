@@ -57,7 +57,7 @@ python -m gpuforge validator --config config/validator.local.toml --check-config
 
 Configuration files must never contain passwords, tokens, private keys, seed phrases, or other credentials. The only supported secret inputs are `GPUFORGE_ARTIFACT_ACCESS_TOKEN` and `GPUFORGE_ATTESTATION_ACCESS_TOKEN`, supplied to the process at runtime. Configuration summaries report only whether these values are present, and the logging formatter redacts their contents.
 
-The local evidence tier is for development tests only. Non-local configurations reject that tier and require fail-closed verification. The sandbox settings are policy declarations at this stage; workload isolation is not implemented and no publisher-supplied code should be run.
+The local evidence tier is for development tests only. Non-local configurations reject that tier and require fail-closed verification. The Linux container backend is disabled by default and has not been approved for untrusted workloads; no publisher-supplied code should be run from this repository.
 
 ## Protocol encoding
 
@@ -117,6 +117,22 @@ Artifact references contain no storage URL or credential. Adapters can request s
 Miner capability discovery accepts an injectable provider that returns only GPU name, memory, driver version, runtime version, and interconnect. The public protocol deliberately excludes serial numbers, hostnames, user names, device paths, network addresses, and unrelated host telemetry. Known H100 SXM, PCIe, and NVL spellings are normalized to stable values; GPU count is derived from the returned devices; and heterogeneous, incomplete, unsupported, or policy-incompatible inventories are rejected.
 
 Driver/runtime acceptance is controlled by an explicit compatibility policy supplied by the operator rather than an implicit local default. The resulting hotkey-signed `CapabilityClaim` always labels discovery as `self_reported`. This proves who signed the claim and makes its contents deterministic; it does not prove that the GPU exists, that the provider is honest, or that training ran on that GPU. Hardware-backed verification and challenge evidence are separate later gates. No miner or validator should treat software discovery as H100 attestation.
+
+## Attestation verification
+
+Attestation challenges bind a validator nonce to the miner hotkey and immutable job digest before deriving the 32-byte nonce sent to a hardware verifier. Evidence is bounded and opaque to the common policy layer. A feature-specific cryptographic backend authenticates the evidence and returns verified facts about nonce freshness, GPU class and count, certificate chains, revocation, reference measurements, and collateral expiry. Local policy derives the evidence tier from those facts; evidence supplied by a miner has no field that can select its own tier.
+
+The optional NVIDIA adapter targets the NVAT 1.x command-line JSON contract and GPU claims schema 3.0. It requires a separately installed `nvattest` executable and is disabled unless explicitly enabled by the operator. It accepts only successful H100/Hopper appraisal results with the bound nonce, secure boot, disabled debug state, valid report and RIM signatures, matching measurements, good OCSP state, and fresh certificate collateral. Missing tools, unsupported formats, stale collateral, verifier outages, malformed claims, and policy downgrades fail closed. GPU-only NVAT evidence can satisfy Tier B; Tier A additionally requires a verified host trust chain from another approved backend.
+
+This integration does not install NVIDIA software, trust decoded tokens without NVAT verification, or silently replace failed hardware attestation with software inventory.
+
+## Container isolation
+
+The execution interface includes a feature-gated Linux Docker/Podman backend. It accepts only digest-pinned images and a bounded in-container argument vector. The launcher fixes a non-root user, read-only root filesystem, dropped Linux capabilities, `no-new-privileges`, default-deny networking, disabled IPC, PID/CPU/RAM/GPU/time limits, and bounded `noexec`, `nosuid`, `nodev` temporary filesystems. Optional seccomp and AppArmor profiles are operator-controlled and cannot be set to `unconfined`.
+
+Publisher-requested host mounts, raw device requests, mutable image tags, runtime flags, host environment variables, wallet paths, container sockets, and unrestricted network modes are not part of the accepted job interface. A timed-out container is explicitly killed and forcibly removed. Execution summaries retain only bounded-output digests and truncation flags rather than raw workload output.
+
+The backend is disabled by default, runs only on Linux when explicitly enabled, and assumes an independently installed and hardened container engine. Passing unit tests does not establish resistance to every kernel, driver, runtime, or GPU escape; deployment remains unsupported.
 
 ## Development checks
 
