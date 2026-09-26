@@ -78,7 +78,7 @@ Protocol signatures cover a separate versioned signing domain, the message type,
 
 Freshness validation uses bounded block windows. Capability claims, execution evidence, and validation receipts reject stale or implausibly future block observations; manifests and leases reject expired transitions. Capability and lease nonces are 256-bit random values. Other message types use their unsigned content digest as a replay token.
 
-The replay cache is bounded and fails closed instead of evicting active entries. Optional on-disk state is replaced atomically, stores hashed cache keys rather than raw hotkeys or nonces, and preserves nonce and evidence-sequence decisions across process restarts. Operators must place replay state on durable private storage. This authenticates protocol messages; it does not yet provide workload isolation, GPU attestation, or proof that a miner executed a training job correctly.
+The replay cache is bounded and fails closed instead of evicting active entries. Optional on-disk state is replaced atomically, stores hashed cache keys rather than raw hotkeys or nonces, and preserves nonce and evidence-sequence decisions across process restarts. Operators must place replay state on durable private storage. Message authentication, workload isolation, GPU attestation, and execution challenges are separate layers; none is sufficient by itself to prove correct execution on a hostile machine.
 
 Wallet seed phrases, private keys, and passwords must never be passed in protocol messages, configuration files, command arguments, logs, or replay state. Only public hotkey addresses and signatures belong in these messages.
 
@@ -133,6 +133,22 @@ The execution interface includes a feature-gated Linux Docker/Podman backend. It
 Publisher-requested host mounts, raw device requests, mutable image tags, runtime flags, host environment variables, wallet paths, container sockets, and unrestricted network modes are not part of the accepted job interface. A timed-out container is explicitly killed and forcibly removed. Execution summaries retain only bounded-output digests and truncation flags rather than raw workload output.
 
 The backend is disabled by default, runs only on Linux when explicitly enabled, and assumes an independently installed and hardened container engine. Passing unit tests does not establish resistance to every kernel, driver, runtime, or GPU escape; deployment remains unsupported.
+
+## Lease and training lifecycle
+
+The miner lease store enforces an explicit offered, accepted, fetching, ready, running, checkpointing, and terminal-state sequence. Lease creation and transitions are idempotent, expired work fails closed, execution and evidence submission are claimed exactly once, and non-secret recovery state is atomically replaced on durable storage. Persisted records contain content digests, deadlines, stable failure codes, and lifecycle markers; hotkeys, access grants, challenge material, and workload output are excluded.
+
+The training supervisor accepts a bounded contract with immutable job and lease digests, a deterministic seed, step and runtime limits, checkpoint cadence, and byte ceilings. Structured progress events are parsed separately from arbitrary workload logs. Logs cannot declare success or become proof material. Checkpoints are accepted only at declared intervals, content-addressed through an injected sink, and matched to structured checkpoint events. Timeout and cancellation request a final checkpoint, allow a bounded cooperative shutdown window, and then terminate an unresponsive process.
+
+The supervisor and lease store are library components. They do not enable the container backend, connect to Bittensor, distribute publisher artifacts, or establish that a workload result is correct.
+
+## Hidden execution challenges
+
+The challenge layer implements a validator-side commit-reveal protocol. Before lease acceptance, the validator publishes a commitment bound to the immutable job digest, a 256-bit lease nonce, a deadline, and bounded shard and canary selection parameters. After acceptance, validator-held entropy deterministically reveals a shard order and hidden canary selection. Anyone holding the reveal can verify the original commitment without receiving the validator's master entropy.
+
+Verification requires an accepted, unexpired lease and consumes each valid commitment once. Changing the job, lease nonce, deadline, selection, or seed invalidates the reveal; the replay guard fails closed when its configured capacity is reached. Validator entropy and revealed seeds are redacted from object representations and errors. Operators must inject validator entropy at runtime and must not persist it in repository configuration, logs, or public state.
+
+Commit-reveal prevents a miner from choosing work after learning a hidden selection, but it is not standalone proof of GPU identity, training correctness, or full-script execution. Validators must combine it with authenticated leases, attestation, checkpoint verification, deterministic or tolerance-bounded result checks, and plausibility analysis.
 
 ## Development checks
 
