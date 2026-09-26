@@ -193,7 +193,7 @@ class EvidenceSettings:
 
 @dataclass(frozen=True, slots=True)
 class SandboxSettings:
-    """Resource ceilings for the future isolated workload runner."""
+    """Resource ceilings for the feature-gated isolated workload runner."""
 
     cpu_cores: int = 8
     memory_mb: int = 32_768
