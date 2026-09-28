@@ -150,6 +150,22 @@ Verification requires an accepted, unexpired lease and consumes each valid commi
 
 Commit-reveal prevents a miner from choosing work after learning a hidden selection, but it is not standalone proof of GPU identity, training correctness, or full-script execution. Validators must combine it with authenticated leases, attestation, checkpoint verification, deterministic or tolerance-bounded result checks, and plausibility analysis.
 
+## Training correctness verification
+
+The correctness layer derives an unpredictable, deterministic selection of training steps and tensor indices from a revealed challenge seed. A challenge can require loss values, gradient slices, parameter deltas, optimizer-state slices, and canary outputs. Every probe is bound to the immutable training-script digest, hyperparameter digest, and required checkpoint step. Missing probes, unexpected probes, stale checkpoints, identity changes, non-finite values, and observations outside per-signal absolute or relative tolerances fail closed with stable reason codes.
+
+Checkpoint components use logical names and content digests to produce a canonical binary Merkle root. Component ordering does not affect the root, while any changed component digest does. The verifier compares the miner root and selected observations with a trusted validator reference; it does not deserialize arbitrary checkpoint files or expose tensor values in errors.
+
+Numeric tolerances are an explicit policy decision for each workload family and kernel configuration. A matching digest or a small selected slice is not proof of an entire training history by itself. Deployment must combine randomized probes with challenge freshness, script and image identity, checkpoint cadence, redundant validation, and enough sampling to make skipped or fabricated work uneconomic.
+
+## Performance measurement
+
+Performance accounting derives samples, tokens, or a workload-defined FLOP proxy from completed steps, batches per step, and a declared global batch size. GPU count is recorded as bound metadata and never multiplies accepted work a second time. Precision, model-shape digest, batch size, and GPU count must match validator policy.
+
+The timing rule excludes declared fetch, setup, warmup, and bounded checkpoint intervals. Active time spans from the first accepted work interval through the last, subtracting only checkpoint intervals within that span; unclassified gaps and artificial sleeps remain charged to active time. Work intervals must be ordered, complete, non-overlapping, and synchronized before and after accelerator work. Independent validator-observed elapsed time must cover the declared phases and remain under a configured ceiling.
+
+These measurement types consume observations from an injected trusted runner boundary; they do not query CUDA or claim that miner-provided timestamps are trustworthy. A production adapter must perform device synchronization, monotonic timing, and batch accounting outside publisher-controlled code, then combine the result with correctness and attestation gates before scoring.
+
 ## Development checks
 
 GPUForge supports Python 3.10 through 3.14. Create an isolated environment and install the development tools:
