@@ -166,6 +166,14 @@ The timing rule excludes declared fetch, setup, warmup, and bounded checkpoint i
 
 These measurement types consume observations from an injected trusted runner boundary; they do not query CUDA or claim that miner-provided timestamps are trustworthy. A production adapter must perform device synchronization, monotonic timing, and batch accounting outside publisher-controlled code, then combine the result with correctness and attestation gates before scoring.
 
+## Evidence and validation
+
+The evidence bundle records bounded content-addressed references for the challenge response, attestation, result, measurement, failure events, and ordered checkpoints. Its canonical root changes when any reference changes. A separate result-binding digest links result, measurement, and failure-event references into the miner-signed `ExecutionEvidence`; the bundle binds the remaining fields to the signed lease and manifest. External blobs must be fetched and checked against their exact size and SHA-256 digest before any verifier consumes them. No URL or credential is embedded in a reference.
+
+The validator library checks signed identities, freshness, lease and bundle linkage, attestation tier, pinned image identity, challenge and training correctness, and accepted work measurements in a fixed order. It produces stable reason codes and an unsigned receipt for validator signing. It does not itself fetch blobs or supply trusted reference training results; those are required from the caller before a receipt can be accepted.
+
+Versioned H100 SXM, PCIe, and NVL throughput profiles provide conservative anomaly envelopes for a specific workload family, model shape, precision, GPU count, and work unit. Profiles require an independently verified reviewer signature before use. Very slow but correct work is flagged for review, while an impossible rate fails validation. MIG, unsupported GPUs, missing profiles, version mismatches, and unverified profile signatures remain unprofiled. Throughput cannot establish GPU identity; hardware attestation remains a separate gate.
+
 ## Development checks
 
 GPUForge supports Python 3.10 through 3.14. Create an isolated environment and install the development tools:
