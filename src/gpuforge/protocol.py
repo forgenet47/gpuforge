@@ -568,6 +568,7 @@ class ExecutionEvidence(ProtocolMessage):
     sequence: int
     signature: str
     protocol_version: int = PROTOCOL_VERSION
+    bundle_root: str | None = None
 
     def __post_init__(self) -> None:
         _version(self.protocol_version)
@@ -593,9 +594,11 @@ class ExecutionEvidence(ProtocolMessage):
         _bounded_int("submitted_at_block", self.submitted_at_block, 1, MAX_BLOCK_NUMBER)
         _bounded_int("sequence", self.sequence, 0, MAX_WORK_UNITS)
         _signature(self.signature)
+        if self.bundle_root is not None:
+            _digest("bundle_root", self.bundle_root)
 
     def _payload(self) -> dict[str, object]:
-        return {
+        payload: dict[str, object] = {
             "active_seconds_ms": self.active_seconds_ms,
             "attestation_digest": self.attestation_digest,
             "challenge_response_digest": self.challenge_response_digest,
@@ -609,10 +612,15 @@ class ExecutionEvidence(ProtocolMessage):
             "submitted_at_block": self.submitted_at_block,
             "work_units": self.work_units,
         }
+        if self.bundle_root is not None:
+            payload["bundle_root"] = self.bundle_root
+        return payload
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, object], version: int) -> ExecutionEvidence:
         """Construct execution evidence from a strict decoded payload."""
+        if "bundle_root" not in payload:
+            payload = {**payload, "bundle_root": None}
         _exact_fields(
             payload,
             {
@@ -628,6 +636,7 @@ class ExecutionEvidence(ProtocolMessage):
                 "signature",
                 "submitted_at_block",
                 "work_units",
+                "bundle_root",
             },
             "execution_evidence",
         )
@@ -653,6 +662,11 @@ class ExecutionEvidence(ProtocolMessage):
             sequence=_integer(payload["sequence"], "sequence"),
             signature=_text(payload["signature"], "signature"),
             protocol_version=version,
+            bundle_root=(
+                None
+                if payload["bundle_root"] is None
+                else _text(payload["bundle_root"], "bundle_root")
+            ),
         )
 
 
